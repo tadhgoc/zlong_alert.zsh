@@ -16,10 +16,13 @@ if ! ([[ -x "$(command -v notify-send)" ]] || [[ -x "$(command -v alerter)" ]]);
 fi
 
 # Define a long duration if needed
-(( ${+zlong_duration} )) || zlong_duration=15
+(( ${+zlong_duration} )) || zlong_duration=60
 
-# Set commands to ignore if needed
-(( ${+zlong_ignore_cmds} )) || zlong_ignore_cmds='vim ssh'
+# Set commands to ignore if needed (matching first word)
+(( ${+zlong_ignore_cmds} )) || zlong_ignore_cmds='vim,nano,ssh,kubctl,meld'
+
+# Set specific commands to ignore if needed (matching entire command)
+(( ${+zlong_ignore_cmds_specific} )) || zlong_ignore_cmds_specific='npm run admin,npm run chimera,luw,lua,lus,git gla,git d,git dl,compare'
 
 # Set as true to ignore commands starting with a space
 (( ${+zlong_ignorespace} )) || zlong_ignorespace='false'
@@ -39,6 +42,7 @@ zlong_alert_func() {
         # Find and use the correct notification command based on OS name
         if [[ "$OSTYPE" == "linux-gnu"* ]]; then
             notify-send $message
+            paplay /usr/share/sounds/gnome/default/alerts/drip.ogg
         elif [[ "$OSTYPE" == "darwin"* ]]; then
             (alerter -timeout 3 -message $message &>/dev/null &)
         fi
@@ -63,7 +67,8 @@ zlong_alert_post() {
     local duration=$(($EPOCHSECONDS - $zlong_timestamp))
     local lasted_long=$(($duration - $zlong_duration))
     local cmd_head=$(echo $zlong_last_cmd | awk '{printf $1}')
-    if [[ $lasted_long -gt 0 && ! -z $zlong_last_cmd && ! $zlong_ignore_cmds =~ $cmd_head ]]; then
+
+    if [[ $lasted_long -gt 0 && ! -z $zlong_last_cmd && ! ($zlong_ignore_cmds =~ $cmd_head || ",$zlong_ignore_cmds_specific," =~ ",$zlong_last_cmd,") ]]; then
         zlong_alert_func $zlong_last_cmd duration
     fi
     zlong_last_cmd=''
